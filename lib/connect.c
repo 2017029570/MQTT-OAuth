@@ -17,6 +17,9 @@ Contributors:
 #include "config.h"
 
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <curl/curl.h>
 
 #include "mosquitto.h"
 #include "mosquitto_internal.h"
@@ -32,6 +35,11 @@ Contributors:
 
 static char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
+struct MemoryStruct {
+	char *memory;
+	size_t size;
+};
+
 static int mosquitto__reconnect(struct mosquitto *mosq, bool blocking, const mosquitto_property *properties);
 static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int port, int keepalive, const char *bind_address);
 
@@ -40,7 +48,7 @@ static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int
 {
 	int i;
 	int rc;
-
+	
 	if(!mosq) return MOSQ_ERR_INVAL;
 	if(!host || port <= 0) return MOSQ_ERR_INVAL;
 
@@ -49,7 +57,7 @@ static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int
 		if(!mosq->id){
 			return MOSQ_ERR_NOMEM;
 		}
-		mosq->id[0] = 'm';
+/*		mosq->id[0] = 'm';
 		mosq->id[1] = 'o';
 		mosq->id[2] = 's';
 		mosq->id[3] = 'q';
@@ -60,8 +68,33 @@ static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int
 
 		for(i=5; i<23; i++){
 			mosq->id[i] = alphanum[(mosq->id[i]&0x7F)%(sizeof(alphanum)-1)];
+		}*/
+		printf("yes\n");
+		CURL *curl;
+		CURLcode res;
+		struct MemoryStruct chunk;
+		
+		chunk.memory = malloc(1);
+		chunk.size = 0;
+
+		curl_global_init(CURL_GLOBAL_ALL);
+
+		curl = curl_easy_init();
+		
+		struct curl_slist *list = NULL;
+
+		if(curl) {
+			curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/client_checkInfo.php");
+			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "cid=cid&passwd=passwd");
+			res = curl_easy_perform(curl);
 		}
+
+
+		
+
 	}
+
+		
 
 	mosquitto__free(mosq->host);
 	mosq->host = mosquitto__strdup(host);
@@ -98,7 +131,8 @@ static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int
 
 int mosquitto_connect(struct mosquitto *mosq, const char *host, int port, int keepalive)
 {
-	return mosquitto_connect_bind(mosq, host, port, keepalive, NULL);
+	return 144;
+//	return mosquitto_connect_bind(mosq, host, port, keepalive, NULL);
 }
 
 
@@ -110,7 +144,7 @@ int mosquitto_connect_bind(struct mosquitto *mosq, const char *host, int port, i
 int mosquitto_connect_bind_v5(struct mosquitto *mosq, const char *host, int port, int keepalive, const char *bind_address, const mosquitto_property *properties)
 {
 	int rc;
-
+	printf("%s\n", mosq->id);
 	if(properties){
 		rc = mosquitto_property_check_all(CMD_CONNECT, properties);
 		if(rc) return rc;
