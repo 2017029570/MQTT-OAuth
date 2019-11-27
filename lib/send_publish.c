@@ -77,6 +77,7 @@ int send__publish(struct mosquitto *mosq, uint16_t mid, const char *topic, uint3
 				/* Topic mapping required on this topic if the message matches */
 
 				rc = mosquitto_topic_matches_sub(cur_topic->local_topic, topic, &match);
+				
 				if(rc){
 					return rc;
 				}
