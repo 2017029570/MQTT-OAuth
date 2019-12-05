@@ -169,13 +169,11 @@ int connect__on_authorised(struct mosquitto_db *db, struct mosquitto *context, v
 		mosquitto__set_state(found_context, mosq_cs_duplicate);
 		do_disconnect(db, found_context, MOSQ_ERR_SUCCESS);
 	}
-
 	rc = acl__find_acls(db, context);
 	if(rc){
 		free(auth_data_out);
 		return rc;
 	}
-
 	if(db->config->connection_messages == true){
 		if(context->is_bridge){
 			if(context->username){
@@ -214,9 +212,7 @@ int connect__on_authorised(struct mosquitto_db *db, struct mosquitto *context, v
 	connection_check_acl(db, context, &context->msgs_in.queued);
 	connection_check_acl(db, context, &context->msgs_out.inflight);
 	connection_check_acl(db, context, &context->msgs_out.queued);
-
 	HASH_ADD_KEYPTR(hh_id, db->contexts_by_id, context->id, strlen(context->id), context);
-
 #ifdef WITH_PERSISTENCE
 	if(!context->clean_start){
 		db->persistence_changes++;
@@ -375,6 +371,7 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 	uint16_t auth_data_len = 0;
 	void *auth_data_out = NULL;
 	uint16_t auth_data_out_len = 0;
+	uint16_t sock = INVALID_SOCKET;
 #ifdef WITH_TLS
 	int i;
 	X509 *client_cert = NULL;
@@ -384,7 +381,7 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 #endif
 
 	G_CONNECTION_COUNT_INC();
-
+	
 	if(!context->listener){
 		return MOSQ_ERR_INVAL;
 	}
@@ -494,7 +491,7 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 	will_retain = ((connect_flags & 0x20) == 0x20); // Temporary hack because MSVC<1800 doesn't have stdbool.h.
 	password_flag = connect_flags & 0x40;
 	username_flag = connect_flags & 0x80;
-
+	
 	if(will && will_retain && db->config->retain_available == false){
 		if(protocol_version == mosq_p_mqtt5){
 			send__connack(db, context, 0, MQTT_RC_RETAIN_NOT_SUPPORTED, NULL);
@@ -764,7 +761,8 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 			 * mosquitto_client_username() functions work, but is hacky */
 			context->id = client_id;
 			context->username = username;
-			rc = mosquitto_unpwd_check(db, context, username, password);
+			if(!strcmp(context->id, "oauth")) rc = mosquitto_oauth_flow(db, context, sock);
+			else rc = mosquitto_unpwd_check(db, context, username, password);
 			context->username = NULL;
 			context->id = NULL;
 			switch(rc){
@@ -828,7 +826,6 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 	context->clean_start = clean_start;
 	context->id = client_id;
 	context->will = will_struct;
-
 	if(context->auth_method){
 		rc = mosquitto_security_auth_start(db, context, false, auth_data, auth_data_len, &auth_data_out, &auth_data_out_len);
 		mosquitto__free(auth_data);

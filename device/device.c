@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
+#include <curl/curl.h>
 
 #ifndef WIN32
 	#include <unistd.h>
@@ -10,11 +12,13 @@
 	#define snprintf sprintf_s
 #endif
 
-#include "/home/nam98/MQTT-OAuth/lib/mosquitto.h"
+#include <mosquitto.h>
 
 #define mqtt_host "localhost"
 #define mqtt_port 1883
 #define MQTT_TOPIC "topic"
+#define DEVICE_ID "uid"
+#define DEVICE_PASSWD "passwd"
 
 static int run = 1;
 
@@ -38,23 +42,44 @@ void message_callback(struct mosquitto *mosq, void *obj, const struct mosquitto_
 	}
 }
 
+//struct mosquitto_message* device_read(struct mosquitto *mosq) {
+//	struct mosquitto_message *buffer;
+//	buffer = (struct mosquitto_message *)malloc(sizeof(struct mosquitto_message));
+	
+//	read(mosq->sock, buffer, sizeof(buffer));
+//	return buffer;
+//}
+
 int main(int argc, char *argv[]) {
 	uint8_t reconnect = true;
-	struct mosquitto *mosq;
+	struct mosquitto *mosq = NULL;
+	//mosq = (struct mosquitto *)malloc(sizeof(struct mosquitto));
+//	struct mosquitto_message *buffer;
+	char* rbuffer = (char*)malloc(sizeof(200));
+	char* wbuffer = (char*)malloc(sizeof(100));
+//	buffer = mosquitto__calloc(1, sizeof(struct mosquitto_message));
 	int rc = 0;
 
 	signal(SIGINT, handle_signal);
 	signal(SIGTERM, handle_signal);
 
 	mosquitto_lib_init();
-
 	mosq = mosquitto_new("oauth", true, 0);
-	
 	if(mosq) {
 //		mosquitto_connect_callback_set(mosq, connect_callback);
 		mosquitto_message_callback_set(mosq, message_callback);
+
 		rc = mosquitto_connect(mosq, mqtt_host, mqtt_port, 0);
-		printf("%d\n", rc);	
+	//	strcpy(wbuffer, "fuck");
+	//	oauth_write(mosq, wbuffer, strlen(wbuffer)+1);
+		
+
+		rbuffer = oauth_read(mosq);
+
+		char* auth_code = (char*)malloc(22);
+		strcpy(auth_code, server_login(rbuffer, DEVICE_ID, DEVICE_PASSWD));
+
+		printf("%s\n", auth_code);	
 		while(run) {
 			rc = mosquitto_loop(mosq, -1, 1);
 			if(run && rc) {

@@ -72,10 +72,10 @@ OBJS=	mosquitto.o \
 		will_mosq.o
 
 mosquitto : ${OBJS}
-	${CROSS_COMPILE}${CC} ${BROKER_LDFLAGS} $^ -o $@ $(BROKER_LDADD)
+	${CROSS_COMPILE}${CC} ${BROKER_LDFLAGS} $^ -o $@ $(BROKER_LDADD) -lcurl
 
 mosquitto.o : mosquitto.c mosquitto_broker_internal.h
-	${CROSS_COMPILE}${CC} $(BROKER_CPPFLAGS) $(BROKER_CFLAGS) -c $< -o $@
+	${CROSS_COMPILE}${CC} $(BROKER_CPPFLAGS) $(BROKER_CFLAGS) -c $< -o $@ -lcurl
 
 alias_mosq.o : ../lib/alias_mosq.c ../lib/alias_mosq.h
 	${CROSS_COMPILE}${CC} $(BROKER_CPPFLAGS) $(BROKER_CFLAGS) -c $< -o $@
@@ -185,8 +185,8 @@ plugin.o : plugin.c mosquitto_plugin.h mosquitto_broker_internal.h
 read_handle.o : read_handle.c mosquitto_broker_internal.h
 	${CROSS_COMPILE}${CC} $(BROKER_CPPFLAGS) $(BROKER_CFLAGS) -c $< -o $@
 
-security.o : security.c mosquitto_broker_internal.h
-	${CROSS_COMPILE}${CC} $(BROKER_CPPFLAGS) $(BROKER_CFLAGS) -c $< -o $@
+security.o : security.c mosquitto_broker_internal.h 
+	${CROSS_COMPILE}${CC} $(BROKER_CPPFLAGS) $(BROKER_CFLAGS) -c $< -o $@ -lcurl
 
 security_default.o : security_default.c mosquitto_broker_internal.h
 	${CROSS_COMPILE}${CC} $(BROKER_CPPFLAGS) $(BROKER_CFLAGS) -c $< -o $@

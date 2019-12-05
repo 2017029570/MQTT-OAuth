@@ -73,7 +73,7 @@ static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int
 		if(!mosq->id){
 			return MOSQ_ERR_NOMEM;
 		}
-/*		mosq->id[0] = 'm';
+		mosq->id[0] = 'm';
 		mosq->id[1] = 'o';
 		mosq->id[2] = 's';
 		mosq->id[3] = 'q';
@@ -84,80 +84,13 @@ static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int
 
 		for(i=5; i<23; i++){
 			mosq->id[i] = alphanum[(mosq->id[i]&0x7F)%(sizeof(alphanum)-1)];
-		}*/
-	}
-	if(!strcmp(mosq->id, "oauth")) {
-		CURL *curl;
-		CURLcode res;
-		struct MemoryStruct chunk;
-		
-		chunk.memory = malloc(1);
-		chunk.size = 0;
-
-		curl_global_init(CURL_GLOBAL_ALL);
-
-		curl = curl_easy_init();
-		
-		struct curl_slist *list = NULL;
-
-		if(curl) {
-			curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/client_checkInfo.php");
-			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "cid=cid&passwd=passwd");
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
-			res = curl_easy_perform(curl);
-
-			printf("login url : %s\n", chunk.memory);
-			message = mosquitto__calloc(1, sizeof(struct mosquitto_message_all));
-			const char *topic = (const char*)malloc(10);
-			strcpy(topic, "login_uri");
-			int payloadlen = 50;
-			const char *payload = (const char*)malloc(payloadlen);
-			sprintf(payload, "uri:%s cid:%s", chunk.memory, cid);
-
-			char str[] = {
-			if(!message){
-				mosquitto_property_free_all(&properties_copy);
-				return MOSQ_ERR_NOMEM;
-			}
-
-			message->next = NULL;
-			message->timestamp = mosquitto_time();
-			message->msg.mid = local_mid;
-			if(topic){
-				message->msg.topic = mosquitto__strdup(topic);
-				if(!message->msg.topic){
-					message__cleanup(&message);
-					mosquitto_property_free_all(&properties_copy);
-					return MOSQ_ERR_NOMEM;
-				}
-			}		
-			if(payloadlen){
-				message->msg.payloadlen = payloadlen;
-				message->msg.payload = mosquitto__malloc(payloadlen*sizeof(uint8_t));
-				if(!message->msg.payload){
-					message__cleanup(&message);
-					mosquitto_property_free_all(&properties_copy);
-					return MOSQ_ERR_NOMEM;
-				}
-				memcpy(message->msg.payload, payload, payloadlen*sizeof(uint8_t));
-			}else{
-				message->msg.payloadlen = 0;
-				message->msg.payload = NULL;
-			}
-			message->msg.qos = qos;
-			message->msg.retain = retain;
-			message->dup = false;
-			message->properties = properties_copy;
-
-			pthread_mutex_lock(&mosq->msgs_out.mutex);
-			message->state = mosq_ms_invalid;
-			message__queue(mosq, message, mosq_md_out);
-			pthread_mutex_unlock(&mosq->msgs_out.mutex);
-			}
 		}
-
+	}
+	else if(!strcmp(mosq->id, "oauth")) {
+		mosq->username = mosquitto__strdup("oauth");
+		mosq->password = mosquitto__strdup("oauth");
 		
+	}
 
 	mosquitto__free(mosq->host);
 	mosq->host = mosquitto__strdup(host);
@@ -186,7 +119,6 @@ static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int
 		log__printf(mosq, MOSQ_LOG_WARNING,
 			"Warning: Unable to open socket pair, outgoing publish commands may be delayed.");
 	}
-
 	return MOSQ_ERR_SUCCESS;
 }
 
@@ -387,4 +319,90 @@ void do_client_disconnect(struct mosquitto *mosq, int reason_code, const mosquit
 	pthread_mutex_unlock(&mosq->callback_mutex);
 	pthread_mutex_unlock(&mosq->current_out_packet_mutex);
 }
+/*	CURL *curl;
+		CURLcode res;
+		struct MemoryStruct chunk;
+		
+		chunk.memory = malloc(1);
+		chunk.size = 0;
+
+		curl_global_init(CURL_GLOBAL_ALL);
+
+		curl = curl_easy_init();
+		
+		struct curl_slist *list = NULL;
+
+		if(curl) {
+			curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/client_checkInfo.php");
+			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "cid=cid&passwd=passwd");
+			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+			res = curl_easy_perform(curl);
+
+			struct mosquitto_message *message;	
+			message = mosquitto__calloc(1, sizeof(struct mosquitto_message));
+			const char *topic = (const char*)malloc(10);
+			strcpy(topic, "login_uri");
+			int payloadlen = 50;
+			const char *payload = (const char*)malloc(payloadlen);
+			sprintf(payload, "uri:%s cid:%s", chunk.memory, CID);
+
+			if(!message){
+				return MOSQ_ERR_NOMEM;
+			}
+
+			if(topic){
+				message->topic = mosquitto__strdup(topic);
+				if(!message->topic){
+					message__cleanup(&message);
+					return MOSQ_ERR_NOMEM;
+				}
+			}		
+			if(payloadlen){
+				message->payloadlen = payloadlen;
+				message->payload = mosquitto__malloc(payloadlen*sizeof(uint8_t));
+				if(!message->payload){
+					message__cleanup(&message);
+					return MOSQ_ERR_NOMEM;
+				}
+				memcpy(message->payload, payload, payloadlen*sizeof(uint8_t));
+			}else{
+				message->payloadlen = 0;
+				message->payload = NULL;
+			}
+			message->qos = 2;
+			message->retain = false;
+			mosquitto__free(mosq->host);
+		mosq->host = mosquitto__strdup(host);
+		if(!mosq->host) return MOSQ_ERR_NOMEM;
+		mosq->port = port;
+
+		mosquitto__free(mosq->bind_address);
+		if(bind_address){
+			mosq->bind_address = mosquitto__strdup(bind_address);
+			if(!mosq->bind_address) return MOSQ_ERR_NOMEM;
+		}	
+
+		mosq->keepalive = keepalive;
+		mosq->msgs_in.inflight_quota = mosq->msgs_in.inflight_maximum;
+		mosq->msgs_out.inflight_quota = mosq->msgs_out.inflight_maximum;
+
+		if(mosq->sockpairR != INVALID_SOCKET){
+			COMPAT_CLOSE(mosq->sockpairR);
+			mosq->sockpairR = INVALID_SOCKET;
+		}
+		if(mosq->sockpairW != INVALID_SOCKET){
+			COMPAT_CLOSE(mosq->sockpairW);
+			mosq->sockpairW = INVALID_SOCKET;
+		}
+			if(net__socketpair(&mosq->sockpairR, &mosq->sockpairW)){
+			log__printf(mosq, MOSQ_LOG_WARNING,
+				"Warning: Unable to open socket pair, outgoing publish commands may be delayed.");
+		}
+
+		
+			rc = net__socket_connect(mosq, mosq->host, mosq->port, mosq->bind_address, true);
+			oauth_write(mosq, message, sizeof(message));
+			}
+		}*/
 

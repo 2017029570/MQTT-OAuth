@@ -19,9 +19,11 @@ Contributors:
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
+#include <curl/curl.h>
 #ifndef WIN32
 #include <sys/time.h>
 #include <strings.h>
+#include <sys/socket.h>
 #endif
 
 #include "mosquitto.h"
@@ -79,7 +81,7 @@ struct mosquitto *mosquitto_new(const char *id, bool clean_start, void *userdata
 {
 	struct mosquitto *mosq = NULL;
 	int rc;
-
+	
 	if(clean_start == false && id == NULL){
 		errno = EINVAL;
 		return NULL;
@@ -611,3 +613,96 @@ int mosquitto_sub_topic_tokens_free(char ***topics, int count)
 	return MOSQ_ERR_SUCCESS;
 }
 
+extern char* oauth_read(struct mosquitto* mosq) 
+{
+	size_t res;
+	char* buffer = (char*)malloc(1024);
+	while(res = read(mosq->sock, buffer, 1024)==-1) {
+		if(errno == EINTR || errno == 11) {
+			continue;
+		}
+		else {
+			printf("recv error : %d\n", errno);
+			break;
+		}
+	}
+	return buffer;
+}
+
+extern int oauth_write(struct mosquitto* mosq, char* msg, size_t msglen) 
+{
+	size_t res;
+	res = write(mosq->sock, msg, msglen);
+	return res;
+}
+
+struct MemoryStruct {
+	char* memory;
+	size_t size;
+};
+
+static size_t WriteMemoryCallback(void* contents, size_t size, size_t nmemb, void *userp)
+{
+	size_t realsize = size * nmemb;
+	struct MemoryStruct *mem = (struct MemoryStruct*)userp;
+
+	char *ptr = realloc(mem->memory, mem->size + realsize + 1);
+	if(ptr==NULL) {
+		printf("not enough memory\n");
+		return 0;
+	}
+	mem->memory = ptr;
+	memcpy(&(mem->memory[mem->size]), contents, realsize);
+	mem->size += realsize;
+	mem->memory[mem->size] = 0;
+
+	return realsize;
+}
+
+extern char* server_login(char* msg, char* id, char* passwd) 
+{
+	char* ptr = strtok(msg, "\" ");
+	char url[200];
+	char post[400];
+	
+	while(ptr!=NULL) {
+		if(!strcmp(ptr, "uri=")) {
+			ptr = strtok(NULL, "\" ");
+			strcpy(url, ptr);
+		}
+		else if(!strcmp(ptr, "cid=")) {
+			strcpy(post, ptr);
+			ptr = strtok(NULL, "\" ");
+			strcat(post, ptr);
+		}
+		ptr = strtok(NULL, "\" ");
+	}
+	strcat(post, "&");
+	strcat(post, "uid=");
+	strcat(post, id);
+	strcat(post, "&");
+	strcat(post, "passwd=");
+	strcat(post, passwd);
+	
+	CURL *curl;
+	CURLcode res;
+	struct MemoryStruct chunk;
+	chunk.memory = malloc(1);
+	chunk.size = 0;
+
+	curl_global_init(CURL_GLOBAL_ALL);
+	curl = curl_easy_init();
+
+	if(curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+		res = curl_easy_perform(curl);
+	}
+	curl_easy_cleanup(curl);
+	curl_global_cleanup();
+
+	return chunk.memory;
+
+}

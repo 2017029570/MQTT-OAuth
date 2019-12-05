@@ -867,7 +867,7 @@ int mosquitto_unpwd_check_default(struct mosquitto_db *db, struct mosquitto *con
 	unsigned int hash_len;
 	int rc;
 #endif
-
+	
 	if(!db) return MOSQ_ERR_INVAL;
 
 	if(db->config->per_listener_settings){
@@ -885,7 +885,6 @@ int mosquitto_unpwd_check_default(struct mosquitto_db *db, struct mosquitto *con
 		 * password is present, but we don't support that. */
 		return MOSQ_ERR_AUTH;
 	}
-
 	HASH_ITER(hh, unpwd_ref, u, tmp){
 		if(!strcmp(u->username, username)){
 			if(u->password){

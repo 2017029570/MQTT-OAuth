@@ -5,11 +5,11 @@ LDFLAGS=../lib/libmosquitto.so.1
 
 all : device
 
-device : device.o
+device : device.o 
 	${CC} $^ -o $@ ${LDFLAGS} -lcurl
 
-device.o : device.c
-	${CC} -c $^ -o $@ ${CFLAGS} -l../lib -lcurl
+device.o : device.c 
+	${CC} -c $^ -o $@ ${CFLAGS} -lcurl
 
 clean:
 	-rm -f *.o device

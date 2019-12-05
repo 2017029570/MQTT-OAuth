@@ -42,7 +42,8 @@ MOSQ_OBJS=mosquitto.o \
 		  utf8_mosq.o \
 		  util_mosq.o \
 		  util_topic.o \
-		  will_mosq.o
+		  will_mosq.o \
+		  mosquitto.o
 
 ALL_DEPS:=
 
@@ -97,7 +98,7 @@ libmosquitto.a : ${MOSQ_OBJS}
 	${CROSS_COMPILE}$(AR) cr $@ $^
 
 mosquitto.o : mosquitto.c mosquitto.h mosquitto_internal.h
-	${CROSS_COMPILE}$(CC) $(LIB_CPPFLAGS) $(LIB_CFLAGS) -c $< -o $@
+	${CROSS_COMPILE}$(CC) $(LIB_CPPFLAGS) $(LIB_CFLAGS) -c $< -o $@ -lcurl
 
 actions.o : actions.c mosquitto.h mosquitto_internal.h
 	${CROSS_COMPILE}$(CC) $(LIB_CPPFLAGS) $(LIB_CFLAGS) -c $< -o $@

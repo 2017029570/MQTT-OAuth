@@ -18,6 +18,10 @@ Contributors:
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <curl/curl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #include "mosquitto_broker_internal.h"
 #include "mosquitto_plugin.h"
@@ -876,4 +880,93 @@ int mosquitto_security_auth_continue(struct mosquitto_db *db, struct mosquitto *
 	}
 
 	return MOSQ_ERR_NOT_SUPPORTED;
+}
+
+struct MemoryStruct {
+	char *memory;
+	size_t size;
+};
+
+static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) 
+{
+	size_t realsize = size * nmemb;
+	struct MemoryStruct *mem = (struct MemoryStruct*) userp;
+
+	char* ptr = realloc(mem->memory, mem->size + realsize + 1);
+	if(ptr == NULL) {
+		printf("not enough memory\n");
+		return 0;
+	}
+	mem->memory = ptr;
+	memcpy(&(mem->memory[mem->size]), contents, realsize);
+	mem->size += realsize;
+	mem->memory[mem->size] = 0;
+	return realsize;
+}
+
+int mosquitto_oauth_flow(struct mosquitto_db* db, struct mosquitto* context, uint16_t sock)
+{
+	CURL *curl;
+	CURLcode res;
+	struct MemoryStruct chunk;
+
+	chunk.memory = malloc(1);
+	chunk.size = 0;
+	
+	curl_global_init(CURL_GLOBAL_ALL);
+
+	curl = curl_easy_init();
+
+	struct curl_slist *list = NULL;
+
+	if(curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/client_checkInfo.php");
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "cid=cid&passwd=passwd");
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+		res = curl_easy_perform(curl);
+	/*	struct mosquitto_message *message;
+		message = mosquitto__calloc(1, sizeof(struct mosquitto_message));
+		const char *topic = (const char*)malloc(10);
+		strcpy(topic, "login_url");
+		int payloadlen = strlen(chunk.memory) + strlen(CID);
+		const char* payload = (const char*)malloc(payloadlen);
+		sprintf(payload, "uri:%s cid:%s", chunk.memory, CID);
+		
+		printf("payload : %s\n", payload);
+
+		if(!message) return MOSQ_ERR_NOMEM;
+		
+		if(topic) {
+			message->topic = mosquitto__strdup(topic);
+			if(!message->topic) {
+				free(message);
+				return MOSQ_ERR_NOMEM;
+			}
+		}
+		if(payloadlen) {
+			message->payloadlen = payloadlen;
+			message->payload = mosquitto__malloc(payloadlen*sizeof(uint8_t));
+			if(!message->payload) {
+				free(message);
+				return MOSQ_ERR_NOMEM;
+			}
+			memcpy(message->payload, payload, payloadlen*sizeof(uint8_t));
+		}else{
+			message->payloadlen = 0;
+			message->payload = NULL;
+		}
+		message->qos = 2;
+		message->retain = false;*/
+		if(strcmp(chunk.memory,"Wrong Info")) {
+			int payloadlen = strlen(chunk.memory) + strlen(CID);
+			char* message = (char*)malloc(payloadlen);
+			sprintf(message, "uri=\"%s\" cid=\"%s\"", chunk.memory, CID);
+	//	int rc2 = read(context->sock, message, sizeof(message));
+	//	printf("read : %s\n", message);
+		//sprintf(writemsg, "uri:%s cid:%s", chunk.memory, CID);
+			int rc1 = write(context->sock, message, strlen(message)+1);
+		}
+	}
+	return 0;
 }

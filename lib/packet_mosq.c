@@ -138,7 +138,7 @@ int packet__queue(struct mosquitto *mosq, struct mosquitto__packet *packet)
 #endif
 	assert(mosq);
 	assert(packet);
-
+	
 	packet->pos = 0;
 	packet->to_process = packet->packet_length;
 
@@ -204,7 +204,6 @@ int packet__write(struct mosquitto *mosq)
 	ssize_t write_length;
 	struct mosquitto__packet *packet;
 	int state;
-
 	if(!mosq) return MOSQ_ERR_INVAL;
 	if(mosq->sock == INVALID_SOCKET) return MOSQ_ERR_NO_CONN;
 
@@ -320,7 +319,6 @@ int packet__read(struct mosquitto *mosq)
 	ssize_t read_length;
 	int rc = 0;
 	int state;
-
 	if(!mosq){
 		return MOSQ_ERR_INVAL;
 	}

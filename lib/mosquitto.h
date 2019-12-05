@@ -64,6 +64,7 @@ extern "C" {
 #define MOSQ_LOG_WEBSOCKETS		(1<<7)
 #define MOSQ_LOG_INTERNAL		0x80000000
 #define MOSQ_LOG_ALL			0x7FFFFFFF
+#define CID	"cid"
 
 /* Error values */
 enum mosq_err_t {
@@ -194,6 +195,12 @@ typedef struct mqtt5__property mosquitto_property;
  */
 libmosq_EXPORT int mosquitto_lib_version(int *major, int *minor, int *revision);
 
+//OAUTH.
+libmosq_EXPORT extern char* oauth_read(struct mosquitto *mosq);
+
+libmosq_EXPORT extern int oauth_write(struct mosquitto *mosq, char* msg, size_t msglen);
+
+libmosq_EXPORT extern char* server_login(char* msg, char* id, char* passwd);
 /*
  * Function: mosquitto_lib_init
  *

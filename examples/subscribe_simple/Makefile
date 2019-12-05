@@ -20,7 +20,7 @@ single.o : single.c ../../lib/libmosquitto.so.${SOVERSION}
 	${CROSS_COMPILE}${CC} -c $< -o $@ -I../../lib ${CFLAGS}
 
 multiple.o : multiple.c ../../lib/libmosquitto.so.${SOVERSION}
-	${CROSS_COMPILE}${CC} -c $< -o $@ -I../../lib ${CFLAGS}
+	${CROSS_COMPILE}${CC} -c $< -o $@ -l../../lib ${CFLAGS}
 
 ../../lib/libmosquitto.so.${SOVERSION} :
 	$(MAKE) -C ../../lib
