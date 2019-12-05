@@ -79,7 +79,8 @@ int main(int argc, char *argv[]) {
 		char* auth_code = (char*)malloc(22);
 		strcpy(auth_code, server_login(rbuffer, DEVICE_ID, DEVICE_PASSWD));
 
-		printf("%s\n", auth_code);	
+		oauth_write(mosq, auth_code, strlen(auth_code)+1);
+
 		while(run) {
 			rc = mosquitto_loop(mosq, -1, 1);
 			if(run && rc) {

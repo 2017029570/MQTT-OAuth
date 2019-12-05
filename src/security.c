@@ -925,39 +925,7 @@ int mosquitto_oauth_flow(struct mosquitto_db* db, struct mosquitto* context, uin
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
 		res = curl_easy_perform(curl);
-	/*	struct mosquitto_message *message;
-		message = mosquitto__calloc(1, sizeof(struct mosquitto_message));
-		const char *topic = (const char*)malloc(10);
-		strcpy(topic, "login_url");
-		int payloadlen = strlen(chunk.memory) + strlen(CID);
-		const char* payload = (const char*)malloc(payloadlen);
-		sprintf(payload, "uri:%s cid:%s", chunk.memory, CID);
 		
-		printf("payload : %s\n", payload);
-
-		if(!message) return MOSQ_ERR_NOMEM;
-		
-		if(topic) {
-			message->topic = mosquitto__strdup(topic);
-			if(!message->topic) {
-				free(message);
-				return MOSQ_ERR_NOMEM;
-			}
-		}
-		if(payloadlen) {
-			message->payloadlen = payloadlen;
-			message->payload = mosquitto__malloc(payloadlen*sizeof(uint8_t));
-			if(!message->payload) {
-				free(message);
-				return MOSQ_ERR_NOMEM;
-			}
-			memcpy(message->payload, payload, payloadlen*sizeof(uint8_t));
-		}else{
-			message->payloadlen = 0;
-			message->payload = NULL;
-		}
-		message->qos = 2;
-		message->retain = false;*/
 		if(strcmp(chunk.memory,"Wrong Info")) {
 			int payloadlen = strlen(chunk.memory) + strlen(CID);
 			char* message = (char*)malloc(payloadlen);
@@ -966,6 +934,20 @@ int mosquitto_oauth_flow(struct mosquitto_db* db, struct mosquitto* context, uin
 	//	printf("read : %s\n", message);
 		//sprintf(writemsg, "uri:%s cid:%s", chunk.memory, CID);
 			int rc1 = write(context->sock, message, strlen(message)+1);
+			
+			char* auth_code = (char*)malloc(22);
+			if(rc1>0) {
+				int rc2;
+				while(rc2 = read(context->sock, auth_code, 21)==-1) {
+					if(errno == EINTR || errno == 11) continue;
+					else {
+						printf("recv error : %d\n", errno);
+						break;
+					}
+				}
+				printf("auth_code : %s\n", auth_code);
+				
+			}
 		}
 	}
 	return 0;
