@@ -62,24 +62,23 @@ int main(int argc, char *argv[]) {
 
 	signal(SIGINT, handle_signal);
 	signal(SIGTERM, handle_signal);
-
+	
 	mosquitto_lib_init();
-	mosq = mosquitto_new("oauth", true, 0);
+	mosq = mosquitto_new(NULL, true, 0,1);
+	
 	if(mosq) {
 //		mosquitto_connect_callback_set(mosq, connect_callback);
 		mosquitto_message_callback_set(mosq, message_callback);
 
 		rc = mosquitto_connect(mosq, mqtt_host, mqtt_port, 0);
-	//	strcpy(wbuffer, "fuck");
-	//	oauth_write(mosq, wbuffer, strlen(wbuffer)+1);
 		
 
 		rbuffer = oauth_read(mosq);
 
 		char* auth_code = (char*)malloc(22);
 		strcpy(auth_code, server_login(rbuffer, DEVICE_ID, DEVICE_PASSWD));
+		rc = oauth_write(mosq, auth_code, strlen(auth_code)+1);
 
-		oauth_write(mosq, auth_code, strlen(auth_code)+1);
 
 		while(run) {
 			rc = mosquitto_loop(mosq, -1, 1);
@@ -89,6 +88,10 @@ int main(int argc, char *argv[]) {
 				mosquitto_reconnect(mosq);
 			}
 		}
+		//mosquitto_disconnect(mosq);
+
+//		rc = mosquitto_connect(mosq, mqtt_host, mqtt_port, 0);
+		
 
 		mosquitto_destroy(mosq);
 	}	

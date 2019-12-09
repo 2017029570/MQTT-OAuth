@@ -14,7 +14,6 @@ DISTFILES= \
 	security/ \
 	service/ \
 	src/ \
-	test/ \
 	\
 	CMakeLists.txt \
 	CONTRIBUTING.md \

@@ -77,7 +77,7 @@ int mosquitto_lib_cleanup(void)
 	return MOSQ_ERR_SUCCESS;
 }
 
-struct mosquitto *mosquitto_new(const char *id, bool clean_start, void *userdata)
+struct mosquitto *mosquitto_new(const char *id, bool clean_start, void *userdata, int using_oauth)
 {
 	struct mosquitto *mosq = NULL;
 	int rc;
@@ -109,6 +109,7 @@ struct mosquitto *mosquitto_new(const char *id, bool clean_start, void *userdata
 			}
 			return NULL;
 		}
+		mosq->using_oauth = using_oauth;
 	}else{
 		errno = ENOMEM;
 	}

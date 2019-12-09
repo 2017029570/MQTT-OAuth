@@ -234,6 +234,7 @@ struct mosquitto {
 	int alias_count;
 	uint32_t will_delay_interval;
 	time_t will_delay_time;
+	int using_oauth;
 #ifdef WITH_TLS
 	SSL *ssl;
 	SSL_CTX *ssl_ctx;

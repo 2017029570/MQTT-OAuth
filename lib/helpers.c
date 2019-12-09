@@ -172,7 +172,7 @@ libmosq_EXPORT int mosquitto_subscribe_callback(
 	cb_userdata.userdata = userdata;
 	cb_userdata.callback = callback;
 
-	mosq = mosquitto_new(client_id, clean_session, &cb_userdata);
+	mosq = mosquitto_new(client_id, clean_session, &cb_userdata,0);
 	if(!mosq){
 		return MOSQ_ERR_NOMEM;
 	}

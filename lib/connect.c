@@ -86,11 +86,6 @@ static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int
 			mosq->id[i] = alphanum[(mosq->id[i]&0x7F)%(sizeof(alphanum)-1)];
 		}
 	}
-	else if(!strcmp(mosq->id, "oauth")) {
-		mosq->username = mosquitto__strdup("oauth");
-		mosq->password = mosquitto__strdup("oauth");
-		
-	}
 
 	mosquitto__free(mosq->host);
 	mosq->host = mosquitto__strdup(host);

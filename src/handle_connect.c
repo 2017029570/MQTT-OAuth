@@ -372,6 +372,7 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 	void *auth_data_out = NULL;
 	uint16_t auth_data_out_len = 0;
 	uint16_t sock = INVALID_SOCKET;
+	int using_oauth;
 #ifdef WITH_TLS
 	int i;
 	X509 *client_cert = NULL;
@@ -624,6 +625,8 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 		}
 	}
 
+	rc = packet__read_uint16(&context->in_packet, &(context->using_oauth));
+
 	if(context->in_packet.pos != context->in_packet.remaining_length){
 		/* Surplus data at end of packet, this must be an error. */
 		rc = MOSQ_ERR_PROTOCOL;
@@ -761,8 +764,11 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 			 * mosquitto_client_username() functions work, but is hacky */
 			context->id = client_id;
 			context->username = username;
-			if(!strcmp(context->id, "oauth")) rc = mosquitto_oauth_flow(db, context, sock);
-			else rc = mosquitto_unpwd_check(db, context, username, password);
+/*			if(!strcmp(context->id, "oauth")) {
+				rc = mosquitto_oauth_flow(db, context, username, password);
+				//if(rc == MOSQ_ERR_SUCCESS) context->listener->use_username_as_clientid = 1;
+			}*/
+			rc = mosquitto_unpwd_check(db, context, username, password);
 			context->username = NULL;
 			context->id = NULL;
 			switch(rc){
@@ -786,19 +792,40 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 			}
 			context->username = username;
 			context->password = password;
+		
 			username = NULL; /* Avoid free() in error: below. */
 			password = NULL;
 		}else{
-			if((db->config->per_listener_settings && context->listener->security_options.allow_anonymous == false)
-					|| (!db->config->per_listener_settings && db->config->security_options.allow_anonymous == false)){
-
-				if(context->protocol == mosq_p_mqtt5){
-					send__connack(db, context, 0, MQTT_RC_NOT_AUTHORIZED, NULL);
-				}else{
-					send__connack(db, context, 0, CONNACK_REFUSED_NOT_AUTHORIZED, NULL);
+			if(context->using_oauth == 1) {
+				rc = mosquitto_unpwd_check(db, context, username, password);
+				switch(rc){
+					case MOSQ_ERR_SUCCESS:
+						break;
+					case MQTT_RC_BAD_USERNAME_OR_PASSWORD:
+						send__connack(db, context, 0, MQTT_RC_BAD_USERNAME_OR_PASSWORD, NULL);
+						context__disconnect(db, context);
+						rc = 1;
+						goto handle_connect_error;
+						break;
+					default:
+						context__disconnect(db, context);
+						rc = 1;
+						goto handle_connect_error;
+						break;
 				}
-				rc = 1;
-				goto handle_connect_error;
+			}
+			else {
+				if((db->config->per_listener_settings && context->listener->security_options.allow_anonymous == false)
+						|| (!db->config->per_listener_settings && db->config->security_options.allow_anonymous == false)){
+	
+					if(context->protocol == mosq_p_mqtt5){
+						send__connack(db, context, 0, MQTT_RC_NOT_AUTHORIZED, NULL);
+					}else{
+						send__connack(db, context, 0, CONNACK_REFUSED_NOT_AUTHORIZED, NULL);
+					}
+					rc = 1;
+					goto handle_connect_error;
+				}
 			}
 		}
 #ifdef WITH_TLS
@@ -826,6 +853,7 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 	context->clean_start = clean_start;
 	context->id = client_id;
 	context->will = will_struct;
+
 	if(context->auth_method){
 		rc = mosquitto_security_auth_start(db, context, false, auth_data, auth_data_len, &auth_data_out, &auth_data_out_len);
 		mosquitto__free(auth_data);

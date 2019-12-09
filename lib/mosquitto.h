@@ -65,6 +65,7 @@ extern "C" {
 #define MOSQ_LOG_INTERNAL		0x80000000
 #define MOSQ_LOG_ALL			0x7FFFFFFF
 #define CID	"cid"
+#define PASSWD	"passwd"
 
 /* Error values */
 enum mosq_err_t {
@@ -264,7 +265,7 @@ libmosq_EXPORT int mosquitto_lib_cleanup(void);
  * See Also:
  * 	<mosquitto_reinitialise>, <mosquitto_destroy>, <mosquitto_user_data_set>
  */
-libmosq_EXPORT struct mosquitto *mosquitto_new(const char *id, bool clean_session, void *obj);
+libmosq_EXPORT struct mosquitto *mosquitto_new(const char *id, bool clean_session, void *obj, int using_oauth);
 
 /*
  * Function: mosquitto_destroy

@@ -179,7 +179,7 @@ mosqpp_EXPORT int subscribe_callback(
 
 mosquittopp::mosquittopp(const char *id, bool clean_session)
 {
-	m_mosq = mosquitto_new(id, clean_session, this);
+	m_mosq = mosquitto_new(id, clean_session, this, 0);
 	mosquitto_connect_callback_set(m_mosq, on_connect_wrapper);
 	mosquitto_connect_with_flags_callback_set(m_mosq, on_connect_with_flags_wrapper);
 	mosquitto_disconnect_callback_set(m_mosq, on_disconnect_wrapper);

@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 
 			memset(clientid, 0, 24);
 			snprintf(clientid, 23, "mysql_log_%d", getpid());
-			mosq = mosquitto_new(clientid, true, connection);
+			mosq = mosquitto_new(clientid, true, connection, 0);
 			if(mosq){
 				mosquitto_connect_callback_set(mosq, connect_callback);
 				mosquitto_message_callback_set(mosq, message_callback);

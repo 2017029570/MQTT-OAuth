@@ -44,6 +44,7 @@ int send__connect(struct mosquitto *mosq, uint16_t keepalive, bool clean_session
 	int proplen = 0, will_proplen, varbytes;
 	mosquitto_property *local_props = NULL;
 	uint16_t receive_maximum;
+	int using_oauth;
 
 	assert(mosq);
 
@@ -63,6 +64,7 @@ int send__connect(struct mosquitto *mosq, uint16_t keepalive, bool clean_session
 	clientid = mosq->id;
 	username = mosq->username;
 	password = mosq->password;
+	using_oauth = mosq->using_oauth;
 #endif
 
 	if(mosq->protocol == mosq_p_mqtt5){
@@ -127,6 +129,7 @@ int send__connect(struct mosquitto *mosq, uint16_t keepalive, bool clean_session
 	if(password){
 		payloadlen += 2+strlen(password);
 	}
+	payloadlen += 2;
 
 	packet->command = CMD_CONNECT;
 	packet->remaining_length = headerlen + payloadlen;
@@ -191,7 +194,7 @@ int send__connect(struct mosquitto *mosq, uint16_t keepalive, bool clean_session
 	if(password){
 		packet__write_string(packet, password, strlen(password));
 	}
-
+	packet__write_uint16(packet, using_oauth);
 	mosq->keepalive = keepalive;
 
 #ifdef WITH_BROKER
