@@ -880,20 +880,19 @@ int mosquitto_unpwd_check_default(struct mosquitto_db *db, struct mosquitto *con
 		unpwd_ref = db->unpwd;
 	}
 	if(context->using_oauth) {
+		HASH_ITER(hh, unpwd_ref, u, tmp) {
+			if(!strcmp(u->username, context->id)) {
+				//Using refresh token.
+			}
+		}
 	       	rc1 = mosquitto_oauth_flow(context, username, password);
-		printf("rc1 : %d\n", rc1);
 
 		if(rc1 == MQTT_RC_SUCCESS) {
 			struct mosquitto__unpwd* unpwd;
 			unpwd = mosquitto__calloc(1, sizeof(struct mosquitto__unpwd));
-				
-
-			printf("context : %s %s\n", context->username, context->password);
 			unpwd->username = mosquitto__strdup(context->id);
 			unpwd->password = mosquitto__strdup(context->password);
 
-			printf("unpwd : %s %s\n", unpwd->username, unpwd->password);
-			
 			HASH_ADD_KEYPTR(hh, db->unpwd, unpwd->username, strlen(unpwd->username), unpwd);
 			return MOSQ_ERR_SUCCESS;
 		}
@@ -906,10 +905,8 @@ int mosquitto_unpwd_check_default(struct mosquitto_db *db, struct mosquitto *con
 		 * password is present, but we don't support that. */
 		return MOSQ_ERR_AUTH;
 	}
-	int i=0;
 	HASH_ITER(hh, unpwd_ref, u, tmp){
-		printf("%d\n", i);
-		i++;
+		printf("%s %s\n", u->username, u->password);
 		if(!strcmp(u->username, username)){
 			if(u->password){
 				if(password){

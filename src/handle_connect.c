@@ -764,10 +764,6 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 			 * mosquitto_client_username() functions work, but is hacky */
 			context->id = client_id;
 			context->username = username;
-/*			if(!strcmp(context->id, "oauth")) {
-				rc = mosquitto_oauth_flow(db, context, username, password);
-				//if(rc == MOSQ_ERR_SUCCESS) context->listener->use_username_as_clientid = 1;
-			}*/
 			rc = mosquitto_unpwd_check(db, context, username, password);
 			context->username = NULL;
 			context->id = NULL;
@@ -797,6 +793,7 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 			password = NULL;
 		}else{
 			if(context->using_oauth == 1) {
+				context->id = client_id;
 				rc = mosquitto_unpwd_check(db, context, username, password);
 				switch(rc){
 					case MOSQ_ERR_SUCCESS:
