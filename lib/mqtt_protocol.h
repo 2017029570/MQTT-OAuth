@@ -105,6 +105,7 @@ enum mqtt5_return_codes {
 	MQTT_RC_WILDCARD_SUBS_NOT_SUPPORTED = 162,	/* SUBACK, DISCONNECT */
 
 	MQTT_RC_CURL_ERROR = 163,
+	MQTT_RC_REFRESH_TOKEN_EXPIRED = 164,
 };
 
 enum mqtt5_property {

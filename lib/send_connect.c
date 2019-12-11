@@ -44,7 +44,7 @@ int send__connect(struct mosquitto *mosq, uint16_t keepalive, bool clean_session
 	int proplen = 0, will_proplen, varbytes;
 	mosquitto_property *local_props = NULL;
 	uint16_t receive_maximum;
-	int using_oauth;
+	int using_oauth = 0;
 
 	assert(mosq);
 

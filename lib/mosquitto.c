@@ -618,7 +618,7 @@ extern char* oauth_read(struct mosquitto* mosq)
 {
 	size_t res;
 	char* buffer = (char*)malloc(1024);
-	while(res = read(mosq->sock, buffer, 1024)==-1) {
+	while((res = read(mosq->sock, buffer, 1024))==-1) {
 		if(errno == EINTR || errno == 11) {
 			continue;
 		}

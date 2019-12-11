@@ -35,28 +35,6 @@ Contributors:
 
 static char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-struct MemoryStruct {
-	char *memory;
-	size_t size;
-};
-
-static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
-	size_t realsize = size * nmemb;
-	struct MemoryStruct *mem = (struct MemoryStruct *) userp;
-
-	char *ptr = realloc(mem->memory, mem->size + realsize + 1);
-	if(ptr == NULL) {
-		printf("not enough memory\n");
-		return 0;
-	}
-
-	mem->memory = ptr;
-	memcpy(&(mem->memory[mem->size]), contents, realsize);
-	mem->size += realsize;
-	mem->memory[mem->size] = 0;
-	return realsize;
-}
-
 static int mosquitto__reconnect(struct mosquitto *mosq, bool blocking, const mosquitto_property *properties);
 static int mosquitto__connect_init(struct mosquitto *mosq, const char *host, int port, int keepalive, const char *bind_address);
 

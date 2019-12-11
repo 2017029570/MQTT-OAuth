@@ -862,7 +862,7 @@ int mosquitto_unpwd_check_default(struct mosquitto_db *db, struct mosquitto *con
 {
 	struct mosquitto__unpwd *u, *tmp;
 	struct mosquitto__unpwd *unpwd_ref;
-	int rc1;
+	int rc1 = -5;
 #ifdef WITH_TLS
 	unsigned char hash[EVP_MAX_MD_SIZE];
 	unsigned int hash_len;
@@ -883,18 +883,38 @@ int mosquitto_unpwd_check_default(struct mosquitto_db *db, struct mosquitto *con
 		HASH_ITER(hh, unpwd_ref, u, tmp) {
 			if(!strcmp(u->username, context->id)) {
 				//Using refresh token.
+				context->password = mosquitto__strdup(u->password);
+				rc1 = mosquitto_oauth_flow_old(context);
+				if(strcmp(context->password, u->password)) {
+					HASH_DELETE(hh, db->unpwd, u);
+					struct mosquitto__unpwd* unpwd;
+					unpwd = mosquitto__calloc(1, sizeof(struct mosquitto__unpwd));
+					unpwd->username = mosquitto__strdup(context->id);
+					unpwd->password = mosquitto__strdup(context->password);
+					HASH_ADD_KEYPTR(hh, db->unpwd, unpwd->username, strlen(unpwd->username), unpwd);
+				}
 			}
+
 		}
-	       	rc1 = mosquitto_oauth_flow(context, username, password);
+		if(rc1 == -5 || rc1 == MQTT_RC_REFRESH_TOKEN_EXPIRED) {
+	       		rc1 = mosquitto_oauth_flow_new(context, username, password);
 
-		if(rc1 == MQTT_RC_SUCCESS) {
-			struct mosquitto__unpwd* unpwd;
-			unpwd = mosquitto__calloc(1, sizeof(struct mosquitto__unpwd));
-			unpwd->username = mosquitto__strdup(context->id);
-			unpwd->password = mosquitto__strdup(context->password);
+			if(rc1 == MQTT_RC_SUCCESS) {
+				struct mosquitto__unpwd* unpwd;
+				unpwd = mosquitto__calloc(1, sizeof(struct mosquitto__unpwd));
+				unpwd->username = mosquitto__strdup(context->id);
+				unpwd->password = mosquitto__strdup(context->password);
 
-			HASH_ADD_KEYPTR(hh, db->unpwd, unpwd->username, strlen(unpwd->username), unpwd);
-			return MOSQ_ERR_SUCCESS;
+				HASH_ITER(hh, unpwd_ref, u, tmp) {
+					if(!strcmp(u->username, context->id)) {
+						HASH_DELETE(hh, db->unpwd, u);
+						break;
+					}
+				}
+				HASH_ADD_KEYPTR(hh, db->unpwd, unpwd->username, strlen(unpwd->username), unpwd);
+				return MOSQ_ERR_SUCCESS;
+			}
+			else return rc1;
 		}
 		else return rc1;
 	}
@@ -906,7 +926,7 @@ int mosquitto_unpwd_check_default(struct mosquitto_db *db, struct mosquitto *con
 		return MOSQ_ERR_AUTH;
 	}
 	HASH_ITER(hh, unpwd_ref, u, tmp){
-		printf("%s %s\n", u->username, u->password);
+				printf("name token : %s %s\n", u->username, u->password);
 		if(!strcmp(u->username, username)){
 			if(u->password){
 				if(password){

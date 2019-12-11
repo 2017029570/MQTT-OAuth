@@ -371,8 +371,6 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 	uint16_t auth_data_len = 0;
 	void *auth_data_out = NULL;
 	uint16_t auth_data_out_len = 0;
-	uint16_t sock = INVALID_SOCKET;
-	int using_oauth;
 #ifdef WITH_TLS
 	int i;
 	X509 *client_cert = NULL;

@@ -906,104 +906,227 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, voi
 }
 
 
-int mosquitto_oauth_flow(struct mosquitto* context, char* username, char* password)
+int mosquitto_oauth_flow_new(struct mosquitto* context, char* username, char* password)
 {
 	CURL *curl;
 	CURLcode res;
-	struct MemoryStruct chunk;
+	struct MemoryStruct chunk1;
+	struct MemoryStruct chunk2;
+	struct MemoryStruct chunk3;
 
-	chunk.memory = malloc(1);
-	chunk.size = 0;
-	
+	chunk1.memory = malloc(1);
+	chunk1.size = 0;
+	chunk2.memory = malloc(1);
+	chunk2.size = 0;
+	chunk3.memory = malloc(1);
+	chunk3.size = 0;
+
 	curl_global_init(CURL_GLOBAL_ALL);
 
 	curl = curl_easy_init();
-
-	struct curl_slist *list = NULL;
-
-
+	
 	if(curl) {
 		//Authenticate Broker's information from Server.
 			curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/client_checkInfo.php");
 			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "cid=cid&passwd=passwd");
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk1);
 			res = curl_easy_perform(curl);
 		
 
-			if(strcmp(chunk.memory,"Wrong Info")) {
-				int payloadlen = strlen(chunk.memory) + strlen(CID);
-				char* message = (char*)malloc(payloadlen);
-				sprintf(message, "uri=\"%s\" cid=\"%s\"", chunk.memory, CID);
-			
+			if(strcmp(chunk1.memory,"Wrong Info")) {
+				int payloadlen = strlen(chunk1.memory) + strlen(CID);
+//				char* message = (char*)malloc(payloadlen);
+				char message[200];
+				sprintf(message, "uri=\"%s\" cid=\"%s\"", chunk1.memory, CID);
+				
 				//Send login URL to Device.
 				int rc1 = write(context->sock, message, strlen(message)+1);
-				char* auth_code = (char*)malloc(24);
+//				free(message);
+//				free(chunk1.memory);
+//				chunk1.size = 0;
+//				char *auth_code = (char*)malloc(24);
+				char auth_code[24];
 				if(rc1>0) {
 					//Receive auth_code from Deivce.
 					int rc2;
-					while(rc2 = read(context->sock, auth_code, 22)==-1) {
+					while((rc2 = read(context->sock, auth_code, 22))==-1) {
 						if(errno == EINTR || errno == 11) continue;
 						else {
 							printf("recv error : %d\n", errno);
 							break;
 						}
 					}
-					chunk.memory = realloc(chunk.memory, 1);
-					chunk.size = 0;
-				
+
 					//Exchange auth_code to access_token.
 					if(strlen(auth_code) == 20) {
 						curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/fetch_token.php");
-						char post[100] = "cid=";
-						strcat(post, CID);
-						strcat(post,"&passwd=");
-						strcat(post, PASSWD);
-						strcat(post, "&auth_code=");
-						strcat(post, auth_code);
-					
+						char post[500] = "";
+						sprintf(post, "cid=%s&passwd=%s&auth_code=%s", CID, PASSWD, auth_code);	
+//						free(auth_code);
+						/*free(chunk.memory);
+						chunk.memory = malloc(1);
+						chunk.size = 0;*/
+
 						curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post);
 						curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-						curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+						curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk2);
 						res = curl_easy_perform(curl);
-						chunk.memory[strlen(chunk.memory)-1] = '\0';
-						if(strlen(chunk.memory) == 41) {
-							context->password = mosquitto__strdup(chunk.memory);	
-							strcpy(post, "");
-							strcpy(post, "cid=");
-							strcat(post, CID);
-							strcat(post, "&passwd=");
-							strcat(post, PASSWD);
-							strcat(post, "&access_token=");
-							char* token = mosquitto__strdup(chunk.memory);
+						chunk2.memory[strlen(chunk2.memory)-1] = '\0';
+						if(strlen(chunk2.memory) == 41) {
+							context->password = mosquitto__strdup(chunk2.memory);	
+							char* token = (char*)malloc(strlen(chunk2.memory)+5);
+							token = mosquitto__strdup(chunk2.memory);
 							char* ptr = strtok(token, ":");
-							strcat(post, ptr);
-
-							chunk.memory = realloc(chunk.memory, 1);
-							chunk.size = 0;
-						
+							sprintf(post, "cid=%s&passwd=%s&access_token=%s", CID, PASSWD, ptr);
+				//			free(token);
+							free(chunk2.memory);
+							chunk2.size = 0;
+/*							free(chunk.memory);
+							chunk.memory = malloc(1);
+							chunk.size = 0;*/
 							curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/get_data.php");
 							curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post);
 							curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-							curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+							curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk3);
 							res = curl_easy_perform(curl);
-
-							if(!strcmp(chunk.memory, "Wrong access token") || !strcmp(chunk.memory, "Wrong client")) 
+							if(!strcmp(chunk3.memory, "Wrong access token") || !strcmp(chunk3.memory, "Wrong client")) 
 								return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
-							 
 							
-							if(chunk.memory[strlen(chunk.memory)-1] == '\n')
-								chunk.memory[strlen(chunk.memory)-1] = '0';
-							context->username = mosquitto__strdup(chunk.memory);
+							if(chunk3.memory[strlen(chunk3.memory)-1] == '\n')
+								chunk3.memory[strlen(chunk3.memory)-1] = '0';
+							context->username = mosquitto__strdup(chunk3.memory);
+							free(chunk3.memory);
+							chunk3.size = 0;
 	
 							return MQTT_RC_SUCCESS;
 						}
-						else return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
+						else {
+							free(chunk3.memory);
+							chunk3.size = 0;
+							return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
+						}
 					}
-					else return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
+					else {
+						free(chunk2.memory);
+						chunk2.size = 0;
+						return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
+					}
+				}
+				else {
+					free(chunk1.memory);
+					chunk1.size = 0;
+					return -1;
 				}
 			}
-			else return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
+			else {
+				free(chunk1.memory);
+				chunk1.size = 0;
+				return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
+			}
 	}
-	else return MQTT_RC_CURL_ERROR; 
+	else {
+		free(chunk1.memory);
+		free(chunk2.memory);
+		free(chunk3.memory);
+		chunk1.size = 0;
+		chunk2.size = 0;
+		chunk3.size = 0;
+		return MQTT_RC_CURL_ERROR; 
+	}
+}
+
+
+int mosquitto_oauth_flow_old(struct mosquitto* context)
+{
+	CURL *curl;
+	CURLcode res;
+	struct MemoryStruct chunk1;
+
+	chunk1.memory = malloc(1);
+	chunk1.size = 0;
+	
+	
+	curl_global_init(CURL_GLOBAL_ALL);
+
+	curl = curl_easy_init();
+	
+	if(curl) {
+		char npost[500] = "";
+		char* ntoken = mosquitto__strdup(context->password);
+		char* nptr = strtok(ntoken, ":");
+		strcat(npost, nptr);
+		sprintf(npost, "cid=%s&passwd=%s&access_token=%s", CID, PASSWD, nptr);
+	
+		curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/get_data.php");
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, npost);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk1);
+		res = curl_easy_perform(curl);
+
+		if(!strcmp(chunk1.memory, "Wrong access token") || !strcmp(chunk1.memory, "Wrong client")) 
+			return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
+		else if(!strcmp(chunk1.memory, "Access Token Expired")) {
+			chunk1.memory = realloc(chunk1.memory, 1);
+			chunk1.size = 0;
+			nptr = strtok(NULL, ":");
+			sprintf(npost, "cid=%s&passwd=%s&refresh_token=%s",CID, PASSWD, nptr);
+			curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/fetch_token.php");
+			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, npost);
+			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk1);
+			res = curl_easy_perform(curl);
+			
+			if(chunk1.memory[strlen(chunk1.memory)-1] == '\n')
+				chunk1.memory[strlen(chunk1.memory)-1] = '\0';
+			
+			if(strlen(chunk1.memory)==41) {
+				context->password = mosquitto__strdup(chunk1.memory);
+				chunk1.memory = realloc(chunk1.memory, 1);
+				chunk1.size = 0;
+				
+				ntoken = mosquitto__strdup(context->password);
+				nptr = strtok(ntoken, ":");
+
+				sprintf(npost, "cid=%s&passwd=%s&access_token=%s", CID, PASSWD, nptr);
+				curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/get_data.php");
+				curl_easy_setopt(curl, CURLOPT_POSTFIELDS, npost);
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk1);
+				res = curl_easy_perform(curl);
+
+				ntoken = mosquitto__strdup(chunk1.memory);
+				
+				nptr = strtok(ntoken, " ");
+				if(!strcmp(nptr, "Wrong")) return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
+				context->username = mosquitto__strdup(chunk1.memory);
+				free(chunk1.memory);
+				chunk1.size = 0;
+				return MQTT_RC_SUCCESS;
+
+			}
+			else if(!strcmp(chunk1.memory, "Refresh Token Expired")) {
+				free(chunk1.memory);
+				chunk1.size = 0;
+				return MQTT_RC_REFRESH_TOKEN_EXPIRED;
+
+			}
+			else {
+				free(chunk1.memory);
+				chunk1.size = 0;
+				return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
+			}
+		}
+		else {
+			context->username = mosquitto__strdup(chunk1.memory);
+			free(chunk1.memory);
+			chunk1.size = 0;
+			return MQTT_RC_SUCCESS;	
+		}
+	}
+	else {
+		free(chunk1.memory);
+		chunk1.size = 0;
+		return MQTT_RC_CURL_ERROR;		
+	}
 }
