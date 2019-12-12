@@ -926,7 +926,6 @@ int mosquitto_unpwd_check_default(struct mosquitto_db *db, struct mosquitto *con
 		return MOSQ_ERR_AUTH;
 	}
 	HASH_ITER(hh, unpwd_ref, u, tmp){
-				printf("name token : %s %s\n", u->username, u->password);
 		if(!strcmp(u->username, username)){
 			if(u->password){
 				if(password){

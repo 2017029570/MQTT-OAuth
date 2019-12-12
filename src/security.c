@@ -936,16 +936,11 @@ int mosquitto_oauth_flow_new(struct mosquitto* context, char* username, char* pa
 
 			if(strcmp(chunk1.memory,"Wrong Info")) {
 				int payloadlen = strlen(chunk1.memory) + strlen(CID);
-//				char* message = (char*)malloc(payloadlen);
 				char message[200];
 				sprintf(message, "uri=\"%s\" cid=\"%s\"", chunk1.memory, CID);
 				
 				//Send login URL to Device.
 				int rc1 = write(context->sock, message, strlen(message)+1);
-//				free(message);
-//				free(chunk1.memory);
-//				chunk1.size = 0;
-//				char *auth_code = (char*)malloc(24);
 				char auth_code[24];
 				if(rc1>0) {
 					//Receive auth_code from Deivce.
@@ -963,10 +958,6 @@ int mosquitto_oauth_flow_new(struct mosquitto* context, char* username, char* pa
 						curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/fetch_token.php");
 						char post[500] = "";
 						sprintf(post, "cid=%s&passwd=%s&auth_code=%s", CID, PASSWD, auth_code);	
-//						free(auth_code);
-						/*free(chunk.memory);
-						chunk.memory = malloc(1);
-						chunk.size = 0;*/
 
 						curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post);
 						curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
@@ -979,12 +970,8 @@ int mosquitto_oauth_flow_new(struct mosquitto* context, char* username, char* pa
 							token = mosquitto__strdup(chunk2.memory);
 							char* ptr = strtok(token, ":");
 							sprintf(post, "cid=%s&passwd=%s&access_token=%s", CID, PASSWD, ptr);
-				//			free(token);
 							free(chunk2.memory);
 							chunk2.size = 0;
-/*							free(chunk.memory);
-							chunk.memory = malloc(1);
-							chunk.size = 0;*/
 							curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/get_data.php");
 							curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post);
 							curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
@@ -1055,7 +1042,6 @@ int mosquitto_oauth_flow_old(struct mosquitto* context)
 		char npost[500] = "";
 		char* ntoken = mosquitto__strdup(context->password);
 		char* nptr = strtok(ntoken, ":");
-		strcat(npost, nptr);
 		sprintf(npost, "cid=%s&passwd=%s&access_token=%s", CID, PASSWD, nptr);
 	
 		curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/get_data.php");
