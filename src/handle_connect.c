@@ -797,12 +797,16 @@ int handle__connect(struct mosquitto_db *db, struct mosquitto *context)
 					case MOSQ_ERR_SUCCESS:
 						break;
 					case MQTT_RC_BAD_USERNAME_OR_PASSWORD:
+						context->username = NULL;
+						context->password = NULL;
 						send__connack(db, context, 0, MQTT_RC_BAD_USERNAME_OR_PASSWORD, NULL);
 						context__disconnect(db, context);
 						rc = 1;
 						goto handle_connect_error;
 						break;
 					default:
+						context->username = NULL;
+						context->password = NULL;
 						context__disconnect(db, context);
 						rc = 1;
 						goto handle_connect_error;

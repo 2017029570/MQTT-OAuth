@@ -669,6 +669,7 @@ extern char* server_login(char* msg, char* id, char* passwd)
 	while(ptr!=NULL) {
 		if(!strcmp(ptr, "uri=")) {
 			ptr = strtok(NULL, "\" ");
+			printf("Server Login URL : %s\n", ptr);
 			strcpy(url, ptr);
 		}
 		else if(!strcmp(ptr, "cid=")) {

@@ -897,8 +897,7 @@ int mosquitto_unpwd_check_default(struct mosquitto_db *db, struct mosquitto *con
 
 		}
 		if(rc1 == -5 || rc1 == MQTT_RC_REFRESH_TOKEN_EXPIRED) {
-	       		rc1 = mosquitto_oauth_flow_new(context, username, password);
-
+	       		rc1 = mosquitto_oauth_flow_new(context);
 			if(rc1 == MQTT_RC_SUCCESS) {
 				struct mosquitto__unpwd* unpwd;
 				unpwd = mosquitto__calloc(1, sizeof(struct mosquitto__unpwd));

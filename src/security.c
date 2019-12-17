@@ -906,7 +906,7 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, voi
 }
 
 
-int mosquitto_oauth_flow_new(struct mosquitto* context, char* username, char* password)
+int mosquitto_oauth_flow_new(struct mosquitto* context)
 {
 	CURL *curl;
 	CURLcode res;
@@ -933,8 +933,7 @@ int mosquitto_oauth_flow_new(struct mosquitto* context, char* username, char* pa
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk1);
 			res = curl_easy_perform(curl);
 		
-
-			if(strcmp(chunk1.memory,"Wrong Info")) {
+			if(strcmp(chunk1.memory,"Wrong Info")!=0) {
 				int payloadlen = strlen(chunk1.memory) + strlen(CID);
 				char message[200];
 				sprintf(message, "uri=\"%s\" cid=\"%s\"", chunk1.memory, CID);
@@ -952,7 +951,8 @@ int mosquitto_oauth_flow_new(struct mosquitto* context, char* username, char* pa
 							break;
 						}
 					}
-
+					sleep(3);
+					printf("auth_code : %s\n", auth_code);
 					//Exchange auth_code to access_token.
 					if(strlen(auth_code) == 20) {
 						curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/fetch_token.php");
@@ -970,6 +970,10 @@ int mosquitto_oauth_flow_new(struct mosquitto* context, char* username, char* pa
 							token = mosquitto__strdup(chunk2.memory);
 							char* ptr = strtok(token, ":");
 							sprintf(post, "cid=%s&passwd=%s&access_token=%s", CID, PASSWD, ptr);
+							sleep(1);
+							printf("Exchanging auth_code to access_token...\n");
+							sleep(3);
+							printf("access_token : %s\n", ptr);
 							free(chunk2.memory);
 							chunk2.size = 0;
 							curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/get_data.php");
@@ -977,6 +981,8 @@ int mosquitto_oauth_flow_new(struct mosquitto* context, char* username, char* pa
 							curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 							curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk3);
 							res = curl_easy_perform(curl);
+							printf("Request the Device's ID to Authorization Server...\n");
+							sleep(3);
 							if(!strcmp(chunk3.memory, "Wrong access token") || !strcmp(chunk3.memory, "Wrong client")) 
 								return MQTT_RC_BAD_USERNAME_OR_PASSWORD;
 							
